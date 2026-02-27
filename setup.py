@@ -15,6 +15,7 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'console_scripts': [
+            'anemone = anemone_agent.cli:main',
             'ollama-shell = shell:main',
             'patch-kingdom-json = scripts.patch_kingdom_json:main',
             'pending-patches = scripts.pending_patches_cli:main',
