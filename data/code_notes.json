@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "repo": "dotpipe/anemone",
+  "ref": "main",
+  "generated_at": "2026-02-27T05:04:55.683145+00:00",
+  "documents": [
+    {
+      "id": "eng1neer-patch-intercept",
+      "path": "eng1neer.py",
+      "range": {
+        "start": 21,
+        "end": 151
+      },
+      "title": "respond_subject_specific: patch command interception block",
+      "tags": [
+        "patch",
+        "engine",
+        "intercept",
+        "pending"
+      ],
+      "notes": [
+        "This try/except block imports all patch helpers from eng1neer_patch and handles patch-related chat commands before any other logic.",
+        "A function-level attribute `_pending_patch` tracks a confirmed preview intent across turns.",
+        "Global commands (apply <id>, preview <id>, list pending, remove pending) are checked first, then per-session pending state.",
+        "If no pending patch and no patch intent is detected, execution falls through to the general Q&A logic.",
+        "The entire block is wrapped in a broad except so patch failures never break the engine."
+      ],
+      "text": "    # Intercept code-notes commands before any other handling.\n    try:\n        from eng1neer_notes import handle_notes_command\n        _notes_response = handle_notes_command(prompt)\n        if _notes_response is not None:\n            return _notes_response\n    except Exception:\n        pass\n\n    # Intercept patcher-related natural-language requests and handle them here.\n    # If a pending patch exists, interpret the user's reply as confirm/cancel/apply.\n    try:\n        from eng1neer_patch import (\n            detect_patch_intent,\n            patch_kingdom_json_chat,\n            prepare_patch_preview,\n            apply_selected_changes,\n            get_git_blame_for_lines,\n            find_line_numbers,\n            get_diff_for_change,\n            load_pending_patches,\n            get_pending_patch,\n            add_pending_patch,\n            remove_pending_patch,\n            apply_pending_patch,\n        )\n        # If there's a pending patch awaiting confirmation, check user response\n        pending = getattr(respond_subject_specific, '_pending_patch', None)\n        user_cmd = prompt.strip().lower()\n        import re\n\n        # Global pending commands: apply <id>, preview pending <id>, list pending, remove pending <id>\n        m_apply_id = re.search(r\"\\bapply(?:\\s+pending)?\\s+([0-9a-fA-F-]{6,})\\b\", user_cmd)\n        if m_apply_id:\n            pid = m_apply_id.group(1)\n            # default to inplace unless user said out=<path>\n            inplace_flag = 'inplace' in user_cmd or 'write' in user_cmd\n            out_m = re.search(r\"out[:=]\\s*([\\w\\-./\\\\]+\\.json)\", user_cmd)\n            out_path = out_m.group(1) if out_m else None\n            res = apply_pending_patch(pid, inplace=inplace_flag, out=out_path, dry_run=False)\n            if res.get('error'):\n                return f\"Failed to apply pending {pid}: {res['error']}\"\n            return f\"Applied {res.get('applied',0)} changes. Wrote to: {res.get('written_to') or 'none'}\"\n\n        m_preview_id = re.search(r\"\\bpreview(?:\\s+pending)?\\s+([0-9a-fA-F-]{6,})\\b\", user_cmd)\n        if m_preview_id:\n            pid = m_preview_id.group(1)\n            ent = get_pending_patch(pid)\n            if not ent:\n                return f'No pending patch with id {pid}'\n            parsed = ent.get('parsed', {})\n            return patch_kingdom_json_chat(parsed.get('path'), parsed.get('old'), parsed.get('new'), regex=parsed.get('regex_flag', False), layer=parsed.get('layer'), apply=False)\n\n        if re.search(r\"\\blist\\s+pending\\b|\\bpending\\s+list\\b|\\bshow\\s+pending\\b\", user_cmd):\n            ents = load_pending_patches()\n            if not ents:\n                return 'No pending patches.'\n            lines = [f\"Pending patches ({len(ents)}):\"]\n            for e in ents:\n                pid = e.get('id')\n                p = e.get('parsed', {})\n                lines.append(f\"- {pid}: {p.get('old')} -> {p.get('new')} (path: {p.get('path')})\")\n            return '\\n'.join(lines)\n\n        m_remove = re.search(r\"\\bremove\\s+pending\\s+([0-9a-fA-F-]{6,})\\b\", user_cmd)\n        if m_remove:\n            pid = m_remove.group(1)\n            ok = remove_pending_patch(pid)\n            return f'Removed pending {pid}.' if ok else f'No pending patch {pid} found.'\n        if pending:\n            # parse commands: apply, apply N, apply 1-3, apply all, cancel, preview, blame N, diff N\n            import re\n            if re.search(r\"\\b(cancel|no|abort)\\b\", user_cmd):\n                respond_subject_specific._pending_patch = None\n                return 'Patch cancelled.'\n\n            m_all = re.search(r\"\\bapply(?:\\s+all)?(?:\\s+inplace)?\\b\", user_cmd)\n            m_sel = re.search(r\"\\bapply\\s+([0-9,\\-\\s]+)(?:\\s+inplace)?\\b\", user_cmd)\n            if m_all and not m_sel:\n                # apply all\n                inplace_flag = 'inplace' in user_cmd or pending.get('apply_flag', False)\n                res = apply_selected_changes(pending['path'], pending['old'], pending['new'], regex=pending['regex_flag'], layer=pending['layer'], selected_indices=None, inplace=inplace_flag, dry_run=pending['dry_run'])\n                respond_subject_specific._pending_patch = None\n                return f\"Applied {res['applied']} changes. Wrote to: {res['written_to']}\" if res['written_to'] else f\"Applied {res['applied']} changes. No file written.\"\n\n            if m_sel:\n                rng = m_sel.group(1)\n                # parse numbers and ranges\n                idxs = []\n                for part in re.split(r\"[\\s,]+\", rng.strip()):\n                    if '-' in part:\n                        a, b = part.split('-', 1)\n                        try:\n                            a_i = int(a) - 1\n                            b_i = int(b) - 1\n                            idxs.extend(list(range(a_i, b_i + 1)))\n                        except Exception:\n                            continue\n                    else:\n                        try:\n                            idxs.append(int(part) - 1)\n                        except Exception:\n                            continue\n                inplace_flag = 'inplace' in user_cmd or pending.get('apply_flag', False)\n                res = apply_selected_changes(pending['path'], pending['old'], pending['new'], regex=pending['regex_flag'], layer=pending['layer'], selected_indices=idxs, inplace=inplace_flag, dry_run=pending['dry_run'])\n                respond_subject_specific._pending_patch = None\n                return f\"Applied {res['applied']} changes. Wrote to: {res['written_to']}\" if res['written_to'] else f\"Applied {res['applied']} changes. No file written.\"\n\n            if re.search(r\"\\bpreview\\b|\\bshow\\b|\\bwhat\\b\", user_cmd):\n                return patch_kingdom_json_chat(pending['path'], pending['old'], pending['new'], regex=pending['regex_flag'], layer=pending['layer'], apply=False)\n\n            m_blame = re.search(r\"\\bblame\\s+(\\d+)\\b\", user_cmd)\n            if m_blame:\n                idx = int(m_blame.group(1)) - 1\n                details = prepare_patch_preview(pending['path'], pending['old'], pending['new'], pending['regex_flag'], pending['layer'])\n                if 0 <= idx < len(details):\n                    nums = find_line_numbers(pending['path'], details[idx][3])\n                    if nums:\n                        b = get_git_blame_for_lines(pending['path'], nums[0], nums[0])\n                        return b or 'No blame info available.'\n                return 'No matching change for blame.'\n\n            m_diff = re.search(r\"\\bdiff\\s+(\\d+)\\b\", user_cmd)\n            if m_diff:\n                idx = int(m_diff.group(1)) - 1\n                details = prepare_patch_preview(pending['path'], pending['old'], pending['new'], pending['regex_flag'], pending['layer'])\n                if 0 <= idx < len(details):\n                    d = get_diff_for_change(pending['path'], details[idx])\n                    return d\n                return 'No matching change for diff.'\n\n"
+    },
+    {
+      "id": "eng1neer-respond-entry",
+      "path": "eng1neer.py",
+      "range": {
+        "start": 14,
+        "end": 20
+      },
+      "title": "respond_subject_specific: function signature and context state init",
+      "tags": [
+        "engine",
+        "context",
+        "state"
+      ],
+      "notes": [
+        "Top of the main chat-dispatch function.",
+        "`_last_answer` is a function attribute used as cross-turn context memory.",
+        "`previous_answer` is passed down for context-aware answer splicing."
+      ],
+      "text": "def respond_subject_specific(prompt: str, assoc_path='thesaurus_assoc.json', data_dir='data') -> str:\n    # --- Context-aware answer splicing ---\n    # If previous answer exists, use it as context for the next answer\n    if not hasattr(respond_subject_specific, '_last_answer'):\n        respond_subject_specific._last_answer = ''\n    previous_answer = respond_subject_specific._last_answer\n\n"
+    },
+    {
+      "id": "patch-pending-store",
+      "path": "eng1neer_patch.py",
+      "range": {
+        "start": 1,
+        "end": 50
+      },
+      "title": "eng1neer_patch: pending patch store (load/save/add/get/remove)",
+      "tags": [
+        "patch",
+        "pending",
+        "store",
+        "json"
+      ],
+      "notes": [
+        "Pending patches are persisted in `data/pending_patches.json` as a JSON array.",
+        "`_ensure_pending_store` creates the file if missing.",
+        "Each entry has an auto-generated UUID, the parsed intent dict, and a created_at timestamp.",
+        "The store is kept small; entries are removed after successful apply."
+      ],
+      "text": "\"\"\"Small integration helpers connecting the engine to the patcher CLI functions.\n\nProvide `patch_kingdom_json_integration` for callers that want to apply or preview\npatches to kingdom JSON files from within the engine.\nThis module also provides a tiny file-backed pending-patch store so the engine\ncan persist pending previewed patch intents across sessions.\n\"\"\"\nfrom __future__ import annotations\nfrom typing import Dict\nimport json\nimport uuid\nfrom datetime import datetime\nfrom pathlib import Path\n\n# pending patches file (workspace-relative)\n_PENDING_PATH = Path('data') / 'pending_patches.json'\n\n\ndef _ensure_pending_store():\n    _PENDING_PATH.parent.mkdir(parents=True, exist_ok=True)\n    if not _PENDING_PATH.exists():\n        _PENDING_PATH.write_text('[]', encoding='utf-8')\n\n\ndef load_pending_patches() -> list:\n    _ensure_pending_store()\n    try:\n        return json.loads(_PENDING_PATH.read_text(encoding='utf-8'))\n    except Exception:\n        return []\n\n\ndef save_pending_patches(entries: list) -> None:\n    _ensure_pending_store()\n    _PENDING_PATH.write_text(json.dumps(entries, indent=2, ensure_ascii=False), encoding='utf-8')\n\n\ndef add_pending_patch(parsed: dict) -> str:\n    \"\"\"Add a parsed patch intent to the pending store and return a generated id.\"\"\"\n    entries = load_pending_patches()\n    pid = str(uuid.uuid4())\n    entry = {\n        'id': pid,\n        'parsed': parsed,\n        'created_at': datetime.utcnow().isoformat() + 'Z',\n    }\n    entries.append(entry)\n    save_pending_patches(entries)\n    return pid\n\n"
+    },
+    {
+      "id": "patch-detect-apply-flow",
+      "path": "eng1neer_patch.py",
+      "range": {
+        "start": 174,
+        "end": 254
+      },
+      "title": "eng1neer_patch: detect_and_run_patch_from_prompt + detect_patch_intent",
+      "tags": [
+        "patch",
+        "intent",
+        "detection",
+        "nlp"
+      ],
+      "notes": [
+        "`detect_patch_intent` parses natural-language prompts for replace/rename/change patterns.",
+        "Multiple regex patterns are tried in order; a broad fallback handles 'OLD to NEW'.",
+        "Returns a dict with keys: old, new, apply_flag, dry_run, regex_flag, layer, path.",
+        "`detect_and_run_patch_from_prompt` wraps detection + preview or apply in one call.",
+        "If apply_flag is set the patch runs immediately; otherwise a pending id is saved."
+      ],
+      "text": "def detect_and_run_patch_from_prompt(prompt: str, default_path: str = 'data/generated_kingdoms.json') -> str | None:\n    \"\"\"Detect patch intent in a natural-language `prompt` and run preview/apply.\n\n    Returns a human-readable string if a patch intent was detected and executed,\n    otherwise returns None.\n    \"\"\"\n    import re\n    p = prompt.strip()\n    lower = p.lower()\n    # quick intent check\n    if 'patch' not in lower and 'replace' not in lower and 'change' not in lower and 'rename' not in lower:\n        return None\n\n    # reuse detect_patch_intent for parsing (expanded patterns)\n    parsed = detect_patch_intent(p, default_path=default_path)\n    if not parsed:\n        return 'I detected a request to patch, but couldn\\'t parse \"replace OLD with NEW\" or similar. Try: replace \"OLD\" with \"NEW\", or say: change OLD to NEW.'\n\n    # If user explicitly asked to apply, run and return result; otherwise save pending and return preview\n    try:\n        if parsed.get('apply_flag'):\n            return patch_kingdom_json_chat(parsed.get('path', default_path), parsed['old'], parsed['new'], regex=parsed.get('regex_flag', False), layer=parsed.get('layer'), apply=True, inplace=parsed.get('apply_flag'), out=None, dry_run=parsed.get('dry_run', False))\n\n        # preview mode: get human-friendly preview and persist the intent as pending\n        preview = patch_kingdom_json_chat(parsed.get('path', default_path), parsed['old'], parsed['new'], regex=parsed.get('regex_flag', False), layer=parsed.get('layer'), apply=False, inplace=False, out=None, dry_run=True)\n        pid = add_pending_patch(parsed)\n        return f\"Preview saved as pending id {pid}.\\n\\n{preview}\\n\\nTo apply this pending patch later, say: apply {pid} (or 'apply pending {pid}').\"\n    except Exception as e:\n        return f'Error running patch: {e}'\n\n\ndef detect_patch_intent(prompt: str, default_path: str = 'data/generated_kingdoms.json') -> dict | None:\n    \"\"\"Parse a natural-language prompt for patch intent and return a dict of parsed options.\n\n    Returns None if no patch intent detected. Dict keys: old, new, apply_flag, dry_run, regex_flag, layer, path\n    \"\"\"\n    import re\n    p = prompt.strip()\n    lower = p.lower()\n    if 'patch' not in lower and 'replace' not in lower and 'change' not in lower:\n        return None\n\n    # try common phrasings\n    patterns = [\n        r\"replace\\s+['\\\"]?(?P<old>[^'\\\"]+)['\\\"]?\\s+with\\s+['\\\"]?(?P<new>[^'\\\"]+)['\\\"]?\",\n        r\"grep\\s+['\\\"]?(?P<old>[^'\\\"]+)['\\\"]?.*replace\\s+['\\\"]?(?P<new>[^'\\\"]+)['\\\"]?\",\n        r\"change\\s+['\\\"]?(?P<old>[^'\\\"]+)['\\\"]?\\s+(?:to|into)\\s+['\\\"]?(?P<new>[^'\\\"]+)['\\\"]?\",\n        r\"rename\\s+['\\\"]?(?P<old>[^'\\\"]+)['\\\"]?\\s+(?:to|into|as)\\s+['\\\"]?(?P<new>[^'\\\"]+)['\\\"]?\",\n        r\"(?P<old>[^\\s]+)\\s*->\\s*(?P<new>[^\\n]+)\",\n        r\"(?P<old>[^\\s]+)\\s*=>\\s*(?P<new>[^\\n]+)\",\n    ]\n    m = None\n    for pat in patterns:\n        m = re.search(pat, p, re.I)\n        if m:\n            break\n    if not m:\n        # try a more permissive 'OLD to NEW' without keywords\n        m = re.search(r\"['\\\"]?(?P<old>[^'\\\"]+)['\\\"]?\\s+(?:to|into)\\s+['\\\"]?(?P<new>[^'\\\"]+)['\\\"]?\", p, re.I)\n    if not m:\n        return None\n\n    old = (m.group('old') or '').strip()\n    new = (m.group('new') or '').strip()\n    apply_flag = bool(re.search(r\"\\bapply\\b|\\bwrite\\b|\\binplace\\b|\\bcommit\\b\", p, re.I))\n    dry_run = bool(re.search(r\"\\bdry[- ]?run\\b|\\bpreview\\b\", p, re.I))\n    regex_flag = bool(re.search(r\"\\bregex\\b\", p, re.I))\n    layer_m = re.search(r\"\\blayer\\s*[:=]?\\s*(?P<layer>\\w+)\\b\", p, re.I)\n    layer = layer_m.group('layer') if layer_m else None\n    path_m = re.search(r\"([\\w\\-./\\\\]+\\.json)\", p)\n    path = path_m.group(1) if path_m else default_path\n\n    return {\n        'old': old,\n        'new': new,\n        'apply_flag': apply_flag,\n        'dry_run': dry_run,\n        'regex_flag': regex_flag,\n        'layer': layer,\n        'path': path,\n    }\n"
+    }
+  ],
+  "_refresh_errors": []
+}
