@@ -3,6 +3,7 @@ prompt_toolkit
 wordfreq
 numpy
 sympy
+pint
 # GUI / editor / web server deps for the kingdom editor
 fastapi
 uvicorn[standard]
