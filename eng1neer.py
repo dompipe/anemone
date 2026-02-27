@@ -18,6 +18,15 @@ def respond_subject_specific(prompt: str, assoc_path='thesaurus_assoc.json', dat
         respond_subject_specific._last_answer = ''
     previous_answer = respond_subject_specific._last_answer
 
+    # Intercept code-notes commands before any other handling.
+    try:
+        from eng1neer_notes import handle_notes_command
+        _notes_response = handle_notes_command(prompt)
+        if _notes_response is not None:
+            return _notes_response
+    except Exception:
+        pass
+
     # Intercept patcher-related natural-language requests and handle them here.
     # If a pending patch exists, interpret the user's reply as confirm/cancel/apply.
     try:

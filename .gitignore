@@ -59,4 +59,5 @@ data/tmp_wiki_terms.txt
 *.egg-info
 examples/*
 tests/*
+!tests/test_eng1neer_notes.py
 tm_holding/*
