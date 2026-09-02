@@ -6,6 +6,12 @@ Running without arguments opens the Anemone shell. Subcommands are forwarded to
 conversation path available.
 """
 
+from pathlib import Path
+
+from word_freq_runtime import ensure_word_freq
+
+ensure_word_freq(Path(__file__).resolve().parent)
+
 from anemone_shell import main
 
 
