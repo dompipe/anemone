@@ -1,0 +1,57 @@
+name: Build global word frequency
+
+on:
+  push:
+    branches:
+      - anemone-store
+    paths-ignore:
+      - word_freq.txt
+      - word_freq_counts.tsv
+      - word_freq.meta.json
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: anemone-word-frequency
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Anemone
+        uses: actions/checkout@v4
+        with:
+          ref: anemone-store
+          fetch-depth: 0
+
+      - name: Checkout CNGN vocabulary source
+        uses: actions/checkout@v4
+        with:
+          repository: dompipe/CNGN
+          ref: main
+          path: _external/CNGN
+
+      - name: Build complete vocabulary
+        run: >-
+          python tools/build_word_freq.py
+          --repo .
+          --extra-root _external/CNGN
+          --extra-label cngn
+
+      - name: Commit vocabulary if changed
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add word_freq.txt word_freq_counts.tsv word_freq.meta.json
+          if git diff --cached --quiet; then
+            echo "Vocabulary is already current."
+            exit 0
+          fi
+          git commit -m "Update global Anemone word frequency"
+          git push origin HEAD:anemone-store
