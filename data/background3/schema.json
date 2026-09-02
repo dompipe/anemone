@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Anemone 3-word semantic record",
+  "type": "object",
+  "properties": {
+    "name": {"type": "string"},
+    "kind": {"enum": ["concept", "fact", "connector"]},
+    "taxonomy": {
+      "type": "object",
+      "properties": {
+        "kingdom": {"type": "string"},
+        "phylum": {"type": "string"},
+        "family": {"type": "string"},
+        "order": {"type": "string"},
+        "genus": {"type": "string"},
+        "species": {"type": "string"},
+        "type": {"type": "string"},
+        "name": {"type": "string"}
+      }
+    },
+    "facts": {"type": "array", "items": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "string"}}},
+    "taxonomy_facts": {"type": "array", "items": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "string"}}},
+    "traits": {"type": "object"},
+    "formulas": {"type": "array"},
+    "source": {"type": "object"}
+  }
+}
