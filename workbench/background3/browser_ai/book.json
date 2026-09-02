@@ -1,0 +1,12 @@
+{
+  "id": "anemone-ai",
+  "title": "Anemone Taxonomy AI",
+  "window": { "id": "anemone-ai", "title": "Anemone Taxonomy AI", "width": 1480, "height": 920 },
+  "spine": ["home", "explore", "ask", "compare"],
+  "leaves": {
+    "home": { "mode": "state-ready", "pasl": "pages/home.jx", "channels": ["taxonomy", "browser", "live"] },
+    "explore": { "mode": "state-ready", "pasl": "pages/explore.jx", "channels": ["taxonomy", "lineage"] },
+    "ask": { "mode": "state-ready", "pasl": "pages/ask.jx", "channels": ["taxonomy", "assistant", "stream"] },
+    "compare": { "mode": "state-ready", "pasl": "pages/compare.jx", "channels": ["taxonomy", "conditions"] }
+  }
+}
