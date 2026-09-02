@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Build byte-offset index.tsv for every JSONL record under data/background3."""
+"""Build byte-offset index.tsv for every JSONL record under an Anemone background folder."""
 from pathlib import Path
-import csv, json, re
+import argparse, csv, json, re
 
 
 def slug(s):
     return re.sub(r'[^a-z0-9]+', '_', str(s).lower()).strip('_')
 
 
-def main(folder='data/background3'):
+def build_index(folder='data/background3'):
     root = Path(folder)
     rows = []
     for fp in sorted(root.rglob('*.jsonl')):
@@ -26,6 +26,8 @@ def main(folder='data/background3'):
                 names = []
                 if rec.get('kind') == 'connector':
                     names.append(rec.get('relation'))
+                    names.append(rec.get('seed'))
+                    names.extend(rec.get('variants') or [])
                 else:
                     names.append(rec.get('name'))
                     names.extend(rec.get('aliases') or [])
@@ -37,6 +39,13 @@ def main(folder='data/background3'):
         w.writerow(['name','file','offset','length'])
         w.writerows(rows)
     print(f'indexed {len(rows):,} names')
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('folder', nargs='?', default='data/background3')
+    args = ap.parse_args()
+    build_index(args.folder)
 
 
 if __name__ == '__main__':
