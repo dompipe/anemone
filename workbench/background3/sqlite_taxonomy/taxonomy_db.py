@@ -296,15 +296,19 @@ def descriptor_novelty(
     *,
     threshold: float = 0.66,
 ) -> float:
-    """Return lexical-semantic novelty against inherited ancestor descriptors."""
+    """Return lexical-semantic novelty against effective existing descriptors.
+
+    Effective descriptors include local assignments plus inherited ancestors,
+    so a new level cannot restate its parent and a node cannot accumulate
+    near-duplicate phrases at the same level.
+    """
     text = normalize_descriptor(text)
     inherited = effective_descriptors(db, taxon_id)
-    ancestor_values = [row for row in inherited if row["depth"] > 0]
-    if not ancestor_values:
+    if not inherited:
         return 1.0
     highest = max(
         descriptor_similarity(text, row["descriptor"])
-        for row in ancestor_values
+        for row in inherited
     )
     return max(0.0, 1.0 - highest)
 
