@@ -27,6 +27,7 @@ from taxonomy_db import (
     RANKS,
     add_child,
     database_status,
+    descriptor_novelty,
     get_taxon,
     init_db,
     set_descriptor,
@@ -271,6 +272,133 @@ def add_source_child(
     )
 
 
+def semantic_descriptor_pool(
+    db: sqlite3.Connection,
+    miner: EncyclopediaMiner | None,
+    parent_id: int,
+    *,
+    limit: int = 240,
+    min_novelty: float = 0.35,
+) -> list[dict]:
+    """Descriptors that can define new semantic children below parent_id."""
+    if miner is None:
+        return []
+    parent = get_taxon(db, parent_id)
+    anchor = parent["scientific_name"] or parent["common_name"] or parent["canonical_name"]
+    aliases = [
+        value
+        for value in (parent["common_name"], parent["scientific_name"])
+        if value and value != anchor
+    ]
+    pool = miner.descriptors_for(anchor, *aliases, limit=limit)
+    return [
+        item for item in pool
+        if descriptor_novelty(db, parent_id, item["descriptor"]) >= min_novelty
+    ]
+
+
+def add_semantic_children(
+    db: sqlite3.Connection,
+    miner: EncyclopediaMiner | None,
+    parent_id: int,
+    next_rank: str,
+    *,
+    needed: int,
+    descriptors_per_child: int = 4,
+    min_novelty: float = 0.35,
+) -> tuple[int, int]:
+    """Fill unused 25-way slots with explicitly semantic descriptor branches.
+
+    These are reasoning/classification nodes, not claimed scientific taxa.
+    Their source scientific/common name is retained only as an encyclopedia
+    lookup anchor for deeper descriptor refinement.
+    """
+    if needed <= 0 or miner is None:
+        return 0, 0
+    parent = get_taxon(db, parent_id)
+    pool = semantic_descriptor_pool(
+        db, miner, parent_id,
+        limit=max(240, needed * max(8, descriptors_per_child * 4)),
+        min_novelty=min_novelty,
+    )
+    if not pool:
+        return 0, 0
+
+    created = 0
+    descriptor_assignments = 0
+    used_primary: set[str] = set()
+
+    for primary_index, primary in enumerate(pool):
+        if created >= needed:
+            break
+        phrase = primary["descriptor"]
+        if phrase in used_primary:
+            continue
+        used_primary.add(phrase)
+
+        child_name = f"{parent['canonical_name']} / {phrase}"
+        try:
+            child_id = add_child(
+                db,
+                parent_id,
+                next_rank,
+                child_name,
+                common_name=parent["common_name"],
+                scientific_name=parent["scientific_name"],
+                source="Anemone semantic taxonomy",
+                source_ref=f"semantic-parent:{parent_id}",
+                origin_kind="semantic",
+                source_rank="descriptor_cluster",
+            )
+        except sqlite3.IntegrityError:
+            continue
+
+        attached = 0
+        ordered = [primary] + [
+            pool[(primary_index + offset) % len(pool)]
+            for offset in range(1, min(len(pool), descriptors_per_child * 3))
+        ]
+        seen: set[str] = set()
+        for item in ordered:
+            text = item["descriptor"]
+            if text in seen:
+                continue
+            seen.add(text)
+            did = set_descriptor(
+                db,
+                child_id,
+                text,
+                kind=item["kind"],
+                state=item["state"],
+                inheritable=True,
+                confidence=float(item["score"]),
+                source="anemone-encyclopedia",
+                source_ref=item.get("source_file"),
+                require_novel=True,
+                min_novelty=min_novelty,
+            )
+            if did is not None:
+                attached += 1
+                descriptor_assignments += 1
+            if attached >= descriptors_per_child:
+                break
+
+        if attached == 0:
+            table, parent_col, child_col = EDGE[(parent["rank"], next_rank)]
+            db.execute(
+                f"DELETE FROM {table} WHERE {parent_col}=? AND {child_col}=?",
+                (parent_id, child_id),
+            )
+            db.execute("DELETE FROM TAXON WHERE taxon_id=?", (child_id,))
+            continue
+
+        created += 1
+        if next_rank != "name":
+            queue_taxon(db, child_id, priority=RANKS.index(next_rank))
+
+    return created, descriptor_assignments
+
+
 def mark_queue(
     db: sqlite3.Connection,
     taxon_id: int,
@@ -307,6 +435,8 @@ def populate(
     miner: EncyclopediaMiner | None,
     *,
     descriptor_limit: int = 10,
+    semantic_fill: bool = True,
+    semantic_descriptors_per_child: int = 4,
     max_nodes: int = 0,
     commit_every: int = 500,
 ) -> dict:
@@ -367,6 +497,28 @@ def populate(
                 break
 
         total = edge_count(db, parent_id, parent_rank)
+        if (
+            semantic_fill
+            and miner is not None
+            and total < CHILDREN_PER_PAGE
+            and not (max_nodes and created >= max_nodes)
+            and not budget_near_limit(db, db_path)
+        ):
+            semantic_needed = CHILDREN_PER_PAGE - total
+            if max_nodes:
+                semantic_needed = min(semantic_needed, max_nodes - created)
+            semantic_created, semantic_descriptors = add_semantic_children(
+                db,
+                miner,
+                parent_id,
+                next_rank,
+                needed=semantic_needed,
+                descriptors_per_child=semantic_descriptors_per_child,
+            )
+            created += semantic_created
+            descriptor_assignments += semantic_descriptors
+            total = edge_count(db, parent_id, parent_rank)
+
         status = "complete" if total >= CHILDREN_PER_PAGE else "source_exhausted"
         if budget_near_limit(db, db_path):
             status = "budget_stop"
@@ -418,6 +570,12 @@ def cli() -> int:
     parser.add_argument("--max-nodes", type=int, default=0)
     parser.add_argument("--commit-every", type=int, default=500)
     parser.add_argument("--skip-encyclopedia", action="store_true")
+    parser.add_argument(
+        "--no-semantic-fill",
+        action="store_true",
+        help="do not fill unused 25-way slots with descriptor-defined semantic nodes",
+    )
+    parser.add_argument("--semantic-descriptors-per-child", type=int, default=4)
     parser.add_argument("--reopen-budget-stop", action="store_true")
     parser.add_argument("--rebuild-source", action="store_true")
     args = parser.parse_args()
@@ -447,6 +605,8 @@ def cli() -> int:
             source,
             miner,
             descriptor_limit=args.descriptors_per_node,
+            semantic_fill=not args.no_semantic_fill,
+            semantic_descriptors_per_child=args.semantic_descriptors_per_child,
             max_nodes=args.max_nodes,
             commit_every=args.commit_every,
         )
