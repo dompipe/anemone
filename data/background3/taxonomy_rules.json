@@ -1,0 +1,25 @@
+{
+  "science": {
+    "physics": ["force","gravity","mass","velocity","acceleration","energy","momentum","electric","magnetic","quantum","particle","wave","thermodynamic","spacetime","relativity"],
+    "chemistry": ["chemical","molecule","atom","bond","reaction","acid","base","oxidation","reduction","catalyst","element","compound"],
+    "biology": ["cell","dna","gene","protein","enzyme","organism","evolution","species","tissue","organ","ecology","metabolism"],
+    "astronomy": ["star","planet","galaxy","orbit","cosmic","astronom","black hole","redshift"],
+    "earth_science": ["geology","earthquake","tectonic","weather","climate","ocean","atmosphere"]
+  },
+  "mathematics": {
+    "calculus": ["derivative","integral","calculus","differentiat","integration"],
+    "linear_algebra": ["vector","matrix","linear algebra","eigen"],
+    "statistics": ["mean","median","variance","statistics","distribution"],
+    "probability": ["probability","random","stochastic"],
+    "geometry": ["geometry","angle","triangle","circle","shape"]
+  },
+  "knowledge": {
+    "philosophy": ["philosophy","epistemology","empiricism","rationalism","locke","knowledge","idea"],
+    "language": ["grammar","language","word","rhetoric","discourse","sentence"]
+  },
+  "computing": {"computer_science": ["algorithm","computer","software","program","code","data structure","compiler"]},
+  "society": {
+    "economics": ["economics","market","price","money","finance"],
+    "history": ["history","historical","century","war","empire"]
+  }
+}
