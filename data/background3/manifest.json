@@ -1,0 +1,25 @@
+{
+  "format": "anemone-background-3word-v1",
+  "taxonomy_levels": [
+    "kingdom",
+    "phylum",
+    "family",
+    "order",
+    "genus",
+    "species",
+    "type",
+    "name"
+  ],
+  "hinge_rule": "last(set_n) == first(set_n_plus_1)",
+  "normalized_fact_tokens": 3,
+  "source_inputs": [
+    "data/definitions.json",
+    "data/wikipedia_defs.json"
+  ],
+  "runtime": "byte-index-first; ripgrep-fallback",
+  "starter_counts": {
+    "taxonomy_concepts": 82,
+    "facts": 97,
+    "connector_relations": 25
+  }
+}
