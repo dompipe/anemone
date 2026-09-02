@@ -1,6 +1,5 @@
-# Files not referenced in eng1neer.py
+# Local/legacy generated files
 vocab.py
-word_freq.txt
 words.py
 vocab.txt
 test.py
