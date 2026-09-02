@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Anemone recursive taxonomy shard",
+  "description": "One parent node and up to 100 direct children. Every taxonomic level may carry descriptors and conditional inheritance rules.",
+  "type": "object",
+  "required": ["parent", "child_rank", "children"],
+  "properties": {
+    "parent": {"$ref": "#/$defs/node"},
+    "child_rank": {
+      "enum": ["phylum", "family", "order", "genus", "species", "type", "name"]
+    },
+    "children": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/node"}
+    },
+    "source": {"type": "object"}
+  },
+  "$defs": {
+    "descriptor_state": {
+      "type": "object",
+      "properties": {
+        "present": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[^ ]+( [^ ]+){1,2}$"},
+          "uniqueItems": true
+        },
+        "absent": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[^ ]+( [^ ]+){1,2}$"},
+          "uniqueItems": true
+        },
+        "variable": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[^ ]+( [^ ]+){1,2}$"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "required": ["if", "then"],
+      "properties": {
+        "if": {
+          "type": "object",
+          "properties": {
+            "all": {"type": "array", "items": {"type": "string"}},
+            "any": {"type": "array", "items": {"type": "string"}},
+            "none": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "add_present": {"type": "array", "items": {"type": "string"}},
+            "add_absent": {"type": "array", "items": {"type": "string"}},
+            "remove": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "rank", "label", "descriptors"],
+      "properties": {
+        "id": {"type": "string"},
+        "rank": {
+          "enum": ["kingdom", "phylum", "family", "order", "genus", "species", "type", "name"]
+        },
+        "label": {"type": "string"},
+        "parent_id": {"type": ["string", "null"]},
+        "descriptors": {"$ref": "#/$defs/descriptor_state"},
+        "phenotypes": {"$ref": "#/$defs/descriptor_state"},
+        "inherit": {"type": "boolean", "default": true},
+        "conditions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/condition"}
+        },
+        "child_shard": {"type": ["string", "null"]},
+        "sources": {"type": "array", "items": {"type": "object"}}
+      }
+    }
+  }
+}
