@@ -1,0 +1,4 @@
+$branch = 25;
+$transitions = 8;
+$live = 1;
+$value = $branch * $transitions + $live;
