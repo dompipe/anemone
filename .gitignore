@@ -63,7 +63,8 @@ tests/*
 !tests/test_eng1neer_notes.py
 tm_holding/*
 
-# Generated Background3 taxonomy stores
+# Generated Background3 taxonomy stores and disposable source caches
 workbench/background3/sqlite_taxonomy/*.sqlite3
 workbench/background3/sqlite_taxonomy/*.sqlite3-wal
 workbench/background3/sqlite_taxonomy/*.sqlite3-shm
+workbench/background3/sqlite_taxonomy/cache/
