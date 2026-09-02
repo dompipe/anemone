@@ -10,35 +10,55 @@ The large taxonomy corpus now uses SQLite under:
 workbench/background3/sqlite_taxonomy/
 ```
 
-The hierarchy is split into adjacent-rank tables:
+The biological/scientific projection follows eight downward transitions beneath a kingdom:
 
 ```text
 KINGDOM_PHYLUM
-PHYLUM_FAMILY
-FAMILY_ORDER
-ORDER_GENUS
+PHYLUM_CLASS
+CLASS_ORDER
+ORDER_FAMILY
+FAMILY_GENUS
 GENUS_SPECIES
 SPECIES_TYPE
 TYPE_NAME
 ```
 
+That gives the requested geometric target of `25^8 = 152,587,890,625` possible leaf paths per kingdom. The complete geometric tree is much larger than the storage budget, so the builder expands breadth-first and stops near the 35 GiB SQLite ceiling.
+
 Taxa themselves live in `TAXON`. Two- and three-word traits and phenotypes are normalized in `DESCRIPTOR` and attached to any rank through `TAXON_DESCRIPTOR`, with explicit `present`, `absent`, and `variable` states. Lower-rank statements override inherited higher-rank statements.
 
-Children are arranged in 25-slot pages. The default main-database ceiling is 35 GiB and is enforced using SQLite's page-count limit.
+Descriptors are added only when semantically new relative to effective local and inherited descriptors. This avoids repeatedly storing facts that already became true at a higher rank.
 
-Initialize the taxonomy store with:
+Current scientific hierarchy is discovered from NCBI Taxonomy. When a real source parent has fewer than 25 suitable children, the builder can fill unused slots with explicitly marked Anemone semantic branches derived from new descriptors. Those rows are tagged `origin_kind=semantic` and are never represented as official scientific taxa.
+
+### Build toward the 35 GiB ceiling
 
 ```bash
-python workbench/background3/sqlite_taxonomy/taxonomy_db.py init
+python workbench/background3/sqlite_taxonomy/populate_taxonomy.py --budget-gib 35
 ```
 
-Inspect its storage budget with:
+The population command is resumable. It caches the current NCBI taxonomy, indexes Anemone's existing encyclopedia data, discovers current kingdom records, fills the adjacent-rank tables, adds descriptor assignments, and checkpoints its build queue.
+
+### Inspect discovered kingdoms
+
+```bash
+python workbench/background3/sqlite_taxonomy/ncbi_source.py build
+python workbench/background3/sqlite_taxonomy/ncbi_source.py kingdoms
+```
+
+### Fast offline structural test
+
+```bash
+python workbench/background3/sqlite_taxonomy/smoke_test.py
+```
+
+### Inspect the generated database
 
 ```bash
 python workbench/background3/sqlite_taxonomy/taxonomy_db.py status
 ```
 
-See `sqlite_taxonomy/README.md` for the complete layout and loader API.
+See `sqlite_taxonomy/README.md` for the complete layout, source/semantic distinction, and loader API.
 
 ## Archive
 
