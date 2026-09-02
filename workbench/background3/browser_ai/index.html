@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anemone Taxonomy AI</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="left">
+    <div class="brand"><div class="mark">A</div><div><b>Anemone</b><small>taxonomy intelligence</small></div></div>
+    <button class="new-chat" id="newChat">＋ New conversation</button>
+    <div class="nav" id="nav">
+      <button data-mode="ask" class="active">◌ Ask Anemone</button>
+      <button data-mode="explore">⌘ Explore taxonomy</button>
+      <button data-mode="compare">⇄ Compare traits</button>
+    </div>
+    <div class="rail-label">Find a taxon</div>
+    <div class="searchbox"><span>⌕</span><input id="taxonSearch" autocomplete="off" placeholder="wolf, Mammalia, Canis…"></div>
+    <div class="search-results" id="searchResults"></div>
+    <div class="rail-label">Kingdoms</div>
+    <div class="kingdoms" id="kingdoms"><div class="context-empty">Loading taxonomy…</div></div>
+    <div class="left-foot"><span class="live-dot"></span><span id="dataMode">connecting</span><br><span id="leftStats">JX browser · SQLite taxonomy</span></div>
+  </aside>
+
+  <main class="main">
+    <header class="main-head"><div class="head-title"><span id="modeTitle">Ask Anemone</span><span class="mode-pill" id="modePill">live</span></div><div class="runtime-pill" id="runtimePill">JX browser · loading</div></header>
+    <section class="conversation" id="conversation">
+      <div class="welcome" id="welcome">
+        <h1>Ask the taxonomy.<br>Watch it reason.</h1>
+        <p>Anemone walks the kingdom → phylum → class → order → family → genus → species → type → name hierarchy, resolves inherited traits, and keeps explicit absences and variable phenotypes visible.</p>
+        <div class="suggestions">
+          <button class="suggestion" data-prompt="Tell me about Canis lupus and show the traits it inherits."><b>Trace inheritance</b><span>Follow a species up through every loaded rank.</span></button>
+          <button class="suggestion" data-prompt="Does the gray wolf have hair covered, retractile claws, and pack hunting?"><b>A + B + C</b><span>See present, absent, variable, and unknown states.</span></button>
+          <button class="suggestion" data-prompt="Show me Mammalia and what becomes semantically new at that level."><b>New at this rank</b><span>Separate local descriptors from inherited ones.</span></button>
+          <button class="suggestion" data-prompt="Explore Animalia downward from the kingdom."><b>Walk the tree</b><span>Open each set of up to 25 children.</span></button>
+        </div>
+      </div>
+    </section>
+    <div class="composer-wrap">
+      <div class="composer">
+        <textarea id="prompt" rows="2" placeholder="Ask about an animal, plant, fungus, lineage, phenotype, or trait combination…"></textarea>
+        <div class="composer-foot"><div class="composer-meta" id="composerMeta">Enter to send · Shift+Enter for newline</div><button class="send" id="send" title="Send">↑</button></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="right">
+    <div class="right-head">Live context</div>
+    <div class="context" id="context"><div class="context-empty">Select a kingdom, search for a taxon, or ask a question. Lineage and inherited evidence will appear here while Anemone answers.</div></div>
+  </aside>
+</div>
+<script src="build/runtime/pasl-vm.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
