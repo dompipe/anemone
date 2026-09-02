@@ -69,6 +69,12 @@ BAD = {
     "found","used","known","called","include","includes","including",
 }
 
+GRAMMAR_WORDS = {
+    "characterized","distinguished","identified","have","has","possess",
+    "possesses","contain","contains","include","includes","bearing",
+    "typically","usually","commonly","often","may","might","can","some",
+}
+
 PHENOTYPE_WORDS = {
     "body","bodies","wing","wings","leaf","leaves","root","roots","stem","stems",
     "bark","flower","flowers","seed","seeds","fruit","fruits","fur","hair","skin",
@@ -189,6 +195,8 @@ def _valid_phrase(words: list[str], taxon_tokens: set[str]) -> bool:
     if lower[0] in STOP or lower[-1] in STOP:
         return False
     if all(w in STOP or w in BAD for w in lower):
+        return False
+    if any(w in GRAMMAR_WORDS for w in lower):
         return False
     if sum(1 for w in lower if w in STOP) > 1:
         return False
