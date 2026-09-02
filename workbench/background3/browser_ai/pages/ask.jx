@@ -1,0 +1,4 @@
+$stream = 1;
+$context = 25;
+$reason = 8;
+$value = $stream * 100 + $context + $reason;
