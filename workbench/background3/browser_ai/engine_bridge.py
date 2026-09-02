@@ -32,6 +32,11 @@ def main() -> int:
     captured_err = io.StringIO()
     try:
         with contextlib.redirect_stdout(captured_out), contextlib.redirect_stderr(captured_err):
+            # word_freq.txt is generated from the whole readable Anemone corpus,
+            # plus a sibling/explicit CNGN checkout when available.
+            from word_freq_runtime import ensure_word_freq
+            word_freq_path = ensure_word_freq(ROOT)
+
             from eng1neer import respond_subject_specific
             reply = respond_subject_specific(
                 prompt,
@@ -50,6 +55,7 @@ def main() -> int:
         "ok": True,
         "reply": str(reply),
         "engine": "eng1neer.respond_subject_specific",
+        "word_freq": str(word_freq_path),
         "diagnostic": (captured_err.getvalue() or captured_out.getvalue())[-4000:],
     }, ensure_ascii=False))
     return 0
