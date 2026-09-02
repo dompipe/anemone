@@ -1,23 +1,13 @@
-from eng1neer import respond_subject_specific
+#!/usr/bin/env python3
+"""Primary Anemone entry point.
 
-def main():
-    print("eng1neer chat (Ctrl-C to exit)")
-    while True:
-        try:
-            prompt = input("you> ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nbye")
-            return
+Running without arguments opens the Anemone shell. Subcommands are forwarded to
+`anemone_shell.py`, while bare text inside the shell keeps the legacy eng1neer
+conversation path available.
+"""
 
-        if not prompt:
-            continue
+from anemone_shell import main
 
-        try:
-            reply = respond_subject_specific(prompt)
-        except Exception as e:
-            reply = f"[error] {type(e).__name__}: {e}"
-
-        print(f"eng1neer> {reply}")
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
