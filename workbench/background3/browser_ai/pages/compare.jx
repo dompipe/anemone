@@ -1,0 +1,4 @@
+$present = 3;
+$absent = 2;
+$variable = 1;
+$value = $present * 100 + $absent * 10 + $variable;
