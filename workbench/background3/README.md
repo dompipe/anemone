@@ -60,6 +60,36 @@ python workbench/background3/sqlite_taxonomy/taxonomy_db.py status
 
 See `sqlite_taxonomy/README.md` for the complete layout, source/semantic distinction, and loader API.
 
+## Live JX browser AI
+
+The live frontend is under:
+
+```text
+workbench/background3/browser_ai/
+```
+
+It is a JX Book with canonical `home`, `explore`, `ask`, and `compare` leaves compiled to PASM/browser. PHP exposes the SQLite taxonomy as a live streaming API; the browser renders answer chunks, lineage, inherited descriptor evidence, explicit absences/variation, search results, and child branches as they arrive.
+
+Build browser-mode JX:
+
+```bash
+export JX_ROOT=/path/to/dompipe/jx
+php workbench/background3/browser_ai/build.php
+```
+
+Run the frontend:
+
+```bash
+cd workbench/background3/browser_ai
+php -S 127.0.0.1:8787
+```
+
+Then open `http://127.0.0.1:8787/`.
+
+If the large SQLite taxonomy has not been generated yet, the frontend uses a small built-in Animalia/wolf lineage so the AI-style interaction can be exercised immediately. It switches to the real taxonomy automatically when the database is present.
+
+See `browser_ai/README.md` for the browser/JX/API architecture and endpoint contract.
+
 ## Archive
 
 The original bundle is stored losslessly in base64 parts under `archive/` because the connected GitHub file writer accepts UTF-8 text rather than arbitrary binary bytes.
