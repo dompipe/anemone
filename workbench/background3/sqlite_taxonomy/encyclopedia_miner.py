@@ -73,6 +73,7 @@ GRAMMAR_WORDS = {
     "characterized","distinguished","identified","have","has","possess",
     "possesses","contain","contains","include","includes","bearing",
     "typically","usually","commonly","often","may","might","can","some",
+    "is","are","was","were","be","been","being",
 }
 
 PHENOTYPE_WORDS = {
@@ -200,7 +201,7 @@ def _valid_phrase(words: list[str], taxon_tokens: set[str]) -> bool:
         return False
     if sum(1 for w in lower if w in STOP) > 1:
         return False
-    if set(lower).issubset(taxon_tokens):
+    if any(w in taxon_tokens for w in lower):
         return False
     if any(len(w) < 2 for w in lower):
         return False
