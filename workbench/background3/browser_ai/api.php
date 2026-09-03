@@ -9,7 +9,7 @@ if ($op === 'ask') {
 $storeRoot = getenv('ANEMONE_TAXONOMY_STORE')
     ?: dirname(__DIR__) . '/sqlite_taxonomy/anemone_taxonomy.mmap';
 if (is_file($storeRoot . '/store.json') && is_file($storeRoot . '/catalog.sqlite3')) {
-    require __DIR__ . '/mmap_api_core.php';
+    require __DIR__ . '/mmap_api_v3.php';
     exit;
 }
 
