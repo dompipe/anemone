@@ -4,7 +4,12 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from mmap_store import MMapTaxonomyStore, decode_taxon_id
+import mmap_store
+from mmap_ids import apply as apply_safe_ids
+
+apply_safe_ids(mmap_store)
+from mmap_ids import decode_taxon_id, MAX_SAFE_TAXON_ID
+from mmap_store import MMapTaxonomyStore
 
 
 def main() -> int:
@@ -54,6 +59,7 @@ def main() -> int:
             assert decode_taxon_id(animalia)[0] == "kingdom"
             assert decode_taxon_id(chordata)[0] == "phylum"
             assert decode_taxon_id(mammalia)[0] == "class"
+            assert max(animalia, chordata, mammalia) <= MAX_SAFE_TAXON_ID < (1 << 53)
 
             lineage = [r["canonical_name"] for r in store.lineage(mammalia)]
             assert lineage == ["Animalia", "Chordata", "Mammalia"], lineage
