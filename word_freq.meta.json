@@ -35,7 +35,7 @@
     ".yaml",
     ".yml"
   ],
-  "generated_at_utc": "2026-09-02T23:34:54.648575+00:00",
+  "generated_at_utc": "2026-09-03T00:41:43.483499+00:00",
   "policy": {
     "case": "lowercase NFKC",
     "compound_identifiers": true,
@@ -49,7 +49,7 @@
   },
   "roots": [
     {
-      "files": 135,
+      "files": 143,
       "label": "anemone",
       "path": "/home/runner/work/anemone/anemone"
     },
@@ -59,7 +59,7 @@
       "path": "/home/runner/work/anemone/anemone/_external/CNGN"
     }
   ],
-  "source_files": 146,
+  "source_files": 154,
   "sqlite_bytes_present": 0,
   "sqlite_extensions": [
     ".db",
@@ -68,9 +68,9 @@
   ],
   "sqlite_files": 0,
   "sqlite_values_scanned": 0,
-  "text_bytes_scanned": 290116243,
-  "text_files": 146,
-  "tokens_scanned": 67249619,
-  "unique_terms": 288255,
+  "text_bytes_scanned": 290196520,
+  "text_files": 154,
+  "tokens_scanned": 67267866,
+  "unique_terms": 288449,
   "version": 2
 }
