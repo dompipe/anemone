@@ -12,7 +12,7 @@ DESCRIPTORS_PER_NODE="${ANEMONE_DESCRIPTORS_PER_NODE:-10}"
 SEMANTIC_DESCRIPTORS_PER_CHILD="${ANEMONE_SEMANTIC_DESCRIPTORS_PER_CHILD:-4}"
 COMMIT_EVERY="${ANEMONE_COMMIT_EVERY:-1000}"
 
-exec "$PYTHON_BIN" workbench/background3/sqlite_taxonomy/populate_mmap_store.py \
+exec "$PYTHON_BIN" workbench/background3/sqlite_taxonomy/run_mmap_populate.py \
   --store "$STORE_PATH" \
   --budget-gib "$BUDGET_GIB" \
   --mmap-gib "$MMAP_GIB" \
