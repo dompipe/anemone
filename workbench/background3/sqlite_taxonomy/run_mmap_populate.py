@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Compatibility entrypoint for populate_mmap_store.py.
-
-The existing NCBI helper intentionally exposes ensure_source() with keyword-only
-arguments.  The mmap population module is kept focused on store logic; this
-entrypoint adapts that call without changing the legacy builder API.
-"""
+"""Compatibility entrypoint for the v3 mmap taxonomy builder."""
 from __future__ import annotations
+
+import mmap_store
+from mmap_ids import apply as apply_safe_ids
+
+# Patch the store before populate_mmap_store imports encode/decode by value.
+apply_safe_ids(mmap_store)
 
 import populate_mmap_store as target
 from ncbi_source import SOURCE_DB, ensure_source as _ensure_source
