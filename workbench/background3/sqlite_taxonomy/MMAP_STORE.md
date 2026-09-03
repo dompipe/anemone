@@ -91,14 +91,18 @@ shard before fetching full child records.
 
 ## Address-space IDs
 
-A taxon id is a 64-bit address:
+A taxon id is an exact integer address shared by SQLite, Python, PHP, and browser
+JavaScript:
 
 ```text
-high 8 bits   = rank code
-low 56 bits   = local row id inside that rank shard
+rank prefix   = rank code 1..9
+low 49 bits   = local row id inside that rank shard
 ```
 
-Examples of ownership are therefore known without a lookup:
+Each rank therefore has up to **562,949,953,421,311 local addresses**, while the
+largest possible taxon id remains below JavaScript's exact integer limit `2^53`.
+
+Examples of ownership are known without a catalog lookup:
 
 ```text
 rank code 1 -> kingdom shard
@@ -107,7 +111,9 @@ rank code 2 -> phylum shard
 rank code 9 -> name shard
 ```
 
-The browser and Python runtime decode the id and open only the necessary shard.
+The population entrypoint applies this JavaScript-safe id geometry before any ids
+are allocated. The browser decodes the same `2^49` rank unit and opens only the
+necessary shard.
 
 ## mmap behavior
 
@@ -155,7 +161,7 @@ python3 workbench/background3/sqlite_taxonomy/mmap_store.py status \
 
 ## Populate/resume
 
-The normal build command now targets v3:
+The normal build command now targets v3 and applies the JavaScript-safe id layer:
 
 ```bash
 bash workbench/background3/sqlite_taxonomy/build_35g.sh
@@ -165,8 +171,8 @@ Environment overrides:
 
 ```text
 ANEMONE_TAXONOMY_STORE
-ANEMONE_TAXONOMY_GIB                 default 35
-ANEMONE_TAXONOMY_MMAP_GIB            default 4
+ANEMONE_TAXONOMY_GIB                  default 35
+ANEMONE_TAXONOMY_MMAP_GIB             default 4
 ANEMONE_DESCRIPTORS_PER_NODE          default 10
 ANEMONE_SEMANTIC_DESCRIPTORS_PER_CHILD default 4
 ANEMONE_COMMIT_EVERY                  default 1000
@@ -192,6 +198,9 @@ anemone_taxonomy.mmap/catalog.sqlite3
 
 Otherwise it falls back to the old single-file API/demo behavior.
 
+The v3 browser adapter reports the same `stats` shape as the old API, including
+aggregate bytes versus the 35-GiB budget, so the existing UI meter still works.
+
 Ask-mode still uses the full Anemone answer engine; the mmap store serves
 structured taxonomy Explore/Compare/context operations.
 
@@ -204,7 +213,7 @@ python3 smoke_test_mmap.py
 
 The smoke test verifies:
 
-- 64-bit rank-address ids,
+- JavaScript-safe rank-address ids,
 - three-rank lineage,
 - write-time descriptor inheritance,
 - lower-rank state override,
